@@ -1,33 +1,28 @@
 package com.reliaquest.api.service;
 
+import com.reliaquest.api.client.EmployeeClient;
 import com.reliaquest.api.model.CreateEmployeeInput;
 import com.reliaquest.api.model.Employee;
 import com.reliaquest.server.model.MockEmployee;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpStatusCodeException;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Service
 public class EmployeeService implements IEmployeeService {
 
-    private static final String BASE = "http://localhost:8112/api/v1/employee";
+    private final EmployeeClient employeeClient;
 
-    private final RestTemplate http;
-
-    public EmployeeService(RestTemplate http) {
-        this.http = http;
+    public EmployeeService(EmployeeClient employeeClient) {
+        this.employeeClient = employeeClient;
     }
+
 
     @Override
     public List<Employee> getAllEmployees() {
-        MockEmployee[] mockEmployees = withRetry(() ->
-                http.getForObject(BASE, MockEmployee[].class)
-        );
+        MockEmployee[] mockEmployees = employeeClient.getAllEmployees();
 
         if (mockEmployees == null || mockEmployees.length == 0) {
             return List.of();
@@ -79,26 +74,5 @@ public class EmployeeService implements IEmployeeService {
         e.setTitle(m.getTitle());
         e.setEmail(m.getEmail());
         return e;
-    }
-
-    private <T> T withRetry(Supplier<T> request) {
-        int attempts = 0;
-        long backoff = 200;
-        while (true) {
-            try {
-                return request.get();
-            } catch (HttpStatusCodeException ex) {
-                if (ex.getStatusCode().value() == 429 && attempts < 3) {
-                    try {
-                        Thread.sleep(backoff);
-                    } catch (InterruptedException ignored) {
-                    }
-                    attempts++;
-                    backoff *= 2;
-                } else {
-                    throw ex;
-                }
-            }
-        }
     }
 }
