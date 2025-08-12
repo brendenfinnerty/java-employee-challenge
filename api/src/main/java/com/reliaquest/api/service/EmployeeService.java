@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -30,18 +31,16 @@ public class EmployeeService implements IEmployeeService {
         }
     }
 
-    /**
-     * Filters employees in memory after fetching all from the API.
-     * Normally this should be handled at the DB/API level for efficiency,
-     * but this is the best option given current API constraints.
-     */
     @Override
     public List<Employee> getEmployeesByNameSearch(String searchString) {
         try {
-            List<Employee> employees = getAllEmployees();
-            return employees.stream()
-                    .filter(employee -> employee.getName().toLowerCase()
-                            .contains(searchString.toLowerCase()))
+            if (searchString == null || searchString.isBlank()) {
+                return getAllEmployees();
+            }
+
+            String needle = searchString.toLowerCase();
+            return getAllEmployees().stream()
+                    .filter(e -> e.getName() != null && e.getName().toLowerCase().contains(needle))
                     .collect(Collectors.toList());
         } catch (Exception e) {
             log.error("Error searching employees by name containing '{}'", searchString, e);
@@ -52,29 +51,30 @@ public class EmployeeService implements IEmployeeService {
     @Override
     public Employee getEmployeeById(String id) {
         try {
-            return employeeClient.getEmployeeById(id);
-        } catch (Exception e) {
-            log.error("Error getting employee with id {}", id, e);
-            throw e;
+            if (id == null || id.isBlank()) {
+                throw new EmployeeNotFoundException(String.valueOf(id));
+            }
+
+            Employee e = employeeClient.getEmployeeById(id);
+            if (e == null) {
+                throw new EmployeeNotFoundException(id);
+            }
+            return e;
+        } catch (Exception ex) {
+            log.error("Error getting employee with id {}", id, ex);
+            throw ex;
         }
     }
 
-    /**
-     * Retrieves the highest salary among all employees.
-     * <p>
-     * If no employees are found, logs a warning and returns {@code 0} as a default value.
-     * This fallback is necessary because we cannot guarantee the API will always return data.
-     *
-     * @return the highest salary, or {@code 0} if no employees exist
-     */
     @Override
     public Integer getHighestSalary() {
         List<Employee> employees = getAllEmployees();
         return employees.stream()
                 .map(Employee::getSalary)
+                .filter(Objects::nonNull)
                 .max(Integer::compareTo)
                 .orElseGet(() -> {
-                    log.warn("No employees found — returning default salary of 0");
+                    log.warn("No employees found - returning default salary of 0");
                     return 0;
                 });
     }
@@ -83,18 +83,24 @@ public class EmployeeService implements IEmployeeService {
     public List<String> getTopTenHighestEarningEmployeeNames() {
         List<Employee> employees = getAllEmployees();
         return employees.stream()
+                .filter(employee -> employee.getSalary() != null)
                 .sorted((e1, e2) -> Integer.compare(e2.getSalary(), e1.getSalary())) // highest first
                 .limit(10)
                 .map(Employee::getName)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public Employee createEmployee(CreateEmployeeInput input) {
+    public Employee createEmployee(CreateEmployeeInput newEmployee) {
         try {
-            return employeeClient.createEmployee(input);
+            Employee created = employeeClient.createEmployee(newEmployee);
+            if (created == null) {
+                throw new IllegalStateException("Failed to create employee - client returned null");
+            }
+            return created;
         } catch (Exception e) {
-            log.error("Error creating employee: {}", input.getName(), e);
+            log.error("Error creating employee: {}", newEmployee, e);
             throw e;
         }
     }
@@ -102,7 +108,7 @@ public class EmployeeService implements IEmployeeService {
     @Override
     public String deleteEmployeeById(String id) {
         try {
-            if (id == null || id.isEmpty()) {
+            if (id == null || id.isBlank()) {
                 throw new EmployeeNotFoundException(id);
             }
             employeeClient.deleteEmployeeById(id);

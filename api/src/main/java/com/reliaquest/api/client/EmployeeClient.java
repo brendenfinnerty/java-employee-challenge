@@ -1,11 +1,8 @@
 package com.reliaquest.api.client;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.reliaquest.api.model.CreateEmployeeInput;
 import com.reliaquest.api.model.Employee;
-import com.reliaquest.server.model.CreateMockEmployeeInput;
-import com.reliaquest.server.model.DeleteMockEmployeeInput;
-import com.reliaquest.server.model.MockEmployee;
-import com.reliaquest.server.model.Response;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
@@ -27,84 +24,107 @@ public class EmployeeClient {
         this.http = http;
     }
 
-    /** Returns API Employees; deserializes mock payload internally and maps. */
+    /**
+     * Fetch all employees from the mock server and returns API model.
+     */
     public List<Employee> getAllEmployees() {
-        ResponseEntity<Response<List<MockEmployee>>> resp = withRetry(() ->
+        ResponseEntity<ApiResponse<List<Employee>>> resp = withRetry(() ->
                 http.exchange(
                         BASE,
                         HttpMethod.GET,
                         null,
-                        new ParameterizedTypeReference<Response<List<MockEmployee>>>() {}
+                        new ParameterizedTypeReference<ApiResponse<List<Employee>>>() {
+                        }
                 )
         );
-        List<MockEmployee> data = resp.getBody() != null ? resp.getBody().data() : List.of();
-        return data == null ? List.of() : data.stream().map(this::toEmployee).toList();
+        ApiResponse<List<Employee>> body = resp.getBody();
+        return (body == null || body.getData() == null) ? List.of() : body.getData();
     }
 
+    /**
+     * Fetch one employee by id. Returns null if the mock returns no data.
+     */
     public Employee getEmployeeById(String id) {
-        ResponseEntity<Response<MockEmployee>> resp = withRetry(() ->
+        ResponseEntity<ApiResponse<Employee>> resp = withRetry(() ->
                 http.exchange(
                         BASE + "/" + id,
                         HttpMethod.GET,
                         null,
-                        new ParameterizedTypeReference<Response<MockEmployee>>() {}
+                        new ParameterizedTypeReference<ApiResponse<Employee>>() {
+                        }
                 )
         );
-        MockEmployee m = resp.getBody() != null ? resp.getBody().data() : null;
-        return m == null ? null : toEmployee(m);
+        ApiResponse<Employee> body = resp.getBody();
+        return body == null ? null : body.getData();
     }
 
+    /**
+     * Create an employee using API input. Returns the created Employee
+     */
     public Employee createEmployee(CreateEmployeeInput input) {
-        CreateMockEmployeeInput body = new CreateMockEmployeeInput();
-        body.setName(input.getName());
-        body.setSalary(input.getSalary());
-        body.setAge(input.getAge());
-        body.setTitle(input.getTitle());
-
-        ResponseEntity<Response<MockEmployee>> resp = withRetry(() ->
+        ResponseEntity<ApiResponse<Employee>> resp = withRetry(() ->
                 http.exchange(
                         BASE,
                         HttpMethod.POST,
-                        new HttpEntity<>(body),
-                        new ParameterizedTypeReference<Response<MockEmployee>>() {}
+                        new HttpEntity<>(input),
+                        new ParameterizedTypeReference<ApiResponse<Employee>>() {
+                        }
                 )
         );
-        MockEmployee created = resp.getBody() != null ? resp.getBody().data() : null;
-        return created == null ? null : toEmployee(created);
+        ApiResponse<Employee> body = resp.getBody();
+        return body == null ? null : body.getData();
     }
 
+    /**
+     * Delete by id.
+     * If the mock server expects DELETE with a JSON body { "name": "..."}, we first resolve the id to get the name.
+     * Returns a confirmation string (or null if nothing came back).
+     */
     public String deleteEmployeeById(String id) {
         Employee e = getEmployeeById(id);
         if (e == null || e.getName() == null) return null;
 
-        DeleteMockEmployeeInput body = new DeleteMockEmployeeInput();
-        body.setName(e.getName());
-
-        ResponseEntity<Response<String>> resp = withRetry(() ->
+        ResponseEntity<ApiResponse<String>> resp = withRetry(() ->
                 http.exchange(
                         BASE,
                         HttpMethod.DELETE,
-                        new HttpEntity<>(body),
-                        new ParameterizedTypeReference<Response<String>>() {}
+                        new HttpEntity<>(new NameDeleteBody(e.getName())),
+                        new ParameterizedTypeReference<ApiResponse<String>>() {
+                        }
                 )
         );
-        Response<String> wrapper = resp.getBody();
-        return (wrapper != null && wrapper.data() != null) ? wrapper.data() : id;
+        ApiResponse<String> body = resp.getBody();
+        return body == null ? null : body.getData();
     }
 
-    // Map server model -> API model (internal only)
-    private Employee toEmployee(MockEmployee m) {
-        Employee e = new Employee();
-        e.setId(m.getId());     // UUID -> UUID
-        e.setName(m.getName());
-        e.setSalary(m.getSalary());
-        e.setAge(m.getAge());
-        e.setTitle(m.getTitle());
-        e.setEmail(m.getEmail());
-        return e;
+    /**
+     * Matches the mock server envelope: { "data": ... } (other fields ignored).
+     */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private static class ApiResponse<T> {
+        private T data;
+
+        public T getData() {
+            return data;
+        }
+
+        public void setData(T data) {
+            this.data = data;
+        }
     }
 
-    // Retry 429s with simple backoff
+    /**
+     * Used when the mock server expects DELETE with a JSON body containing the employee name.
+     */
+    private static class NameDeleteBody {
+        public String name;
+
+        NameDeleteBody(String name) {
+            this.name = name;
+        }
+    }
+
+    // --- retry helper for transient 429s ---
     private <T> T withRetry(Supplier<T> call) {
         int attempts = 0;
         long backoff = 200;
@@ -113,7 +133,10 @@ public class EmployeeClient {
                 return call.get();
             } catch (HttpStatusCodeException ex) {
                 if (ex.getStatusCode().value() == 429 && attempts < 3) {
-                    try { Thread.sleep(backoff); } catch (InterruptedException ignored) {}
+                    try {
+                        Thread.sleep(backoff);
+                    } catch (InterruptedException ignored) {
+                    }
                     attempts++;
                     backoff *= 2;
                 } else {

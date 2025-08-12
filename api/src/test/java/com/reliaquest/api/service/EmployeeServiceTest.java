@@ -53,26 +53,25 @@ class EmployeeServiceTest {
 
     @Test
     void getEmployeesByNameSearch_caseInsensitive() {
-        Employee a = new Employee(UUID.randomUUID(), "Alice Johnson", 100, 25, "X", "a@x");
+        Employee a = new Employee(UUID.randomUUID(), "Brenden Finnerty", 2000000, 25, "dev", "brenden.finnerty@gmail.com");
         Employee b = new Employee(UUID.randomUUID(), "Bob", 200, 26, "Y", "b@y");
         when(client.getAllEmployees()).thenReturn(List.of(a, b));
 
-        List<Employee> res = service.getEmployeesByNameSearch("alice");
+        List<Employee> res = service.getEmployeesByNameSearch("brenden");
+        List<Employee> res2 = service.getEmployeesByNameSearch("Bob");
+
         assertEquals(1, res.size());
-        assertEquals("Alice Johnson", res.get(0).getName());
+        assertEquals("Brenden Finnerty", res.get(0).getName());
+        assertEquals("Bob", res2.get(0).getName());
     }
 
-    // If your service guards null names, this should pass; otherwise add a null-check in filter.
     @Test
     void getEmployeesByNameSearch_nullNameDoesNotNPE() {
         Employee a = new Employee(UUID.randomUUID(), null, 100, 25, "X", "a@x");
         when(client.getAllEmployees()).thenReturn(List.of(a));
-
-        // Expect either [] or guarded behavior — but definitely no exception
         assertDoesNotThrow(() -> service.getEmployeesByNameSearch("x"));
     }
 
-    // If you decide null/blank search returns all, this asserts that.
     @Test
     void getEmployeesByNameSearch_blankReturnsAll() {
         List<Employee> list = List.of(
@@ -83,8 +82,6 @@ class EmployeeServiceTest {
 
         assertEquals(2, service.getEmployeesByNameSearch("  ").size());
     }
-
-    // -------- getEmployeeById --------
 
     @Test
     void getEmployeeById_found() {
@@ -97,7 +94,6 @@ class EmployeeServiceTest {
         assertEquals(id, result.getId());
     }
 
-    // If your service throws when not found, this is correct. If it returns null, change to assertNull.
     @Test
     void getEmployeeById_notFound_throws() {
         when(client.getEmployeeById(anyString())).thenReturn(null);
@@ -120,7 +116,6 @@ class EmployeeServiceTest {
         assertEquals(0, service.getHighestSalary());
     }
 
-    // If your service filters null salaries, this should pass; otherwise add filter(Objects::nonNull).
     @Test
     void getHighestSalary_allNullSalaries_returnsZero() {
         Employee a = new Employee(UUID.randomUUID(), "A", null, 25, "X", "a@x");
@@ -145,7 +140,6 @@ class EmployeeServiceTest {
         assertEquals("E5", names.get(9));  // 10th item
     }
 
-    // If your service skips null salaries, ensure it still returns some names.
     @Test
     void topTenHighestEarningEmployeeNames_handlesNulls() {
         List<Employee> list = List.of(
@@ -173,7 +167,6 @@ class EmployeeServiceTest {
         assertNotNull(result.getId());
     }
 
-    // If your service throws on null create, keep this; otherwise change to assertNull.
     @Test
     void createEmployee_clientReturnsNull_throwsIllegalState() {
         CreateEmployeeInput in = new CreateEmployeeInput("Brenden", 120000, 30, "Dev");
