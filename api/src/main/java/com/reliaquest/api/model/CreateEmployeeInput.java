@@ -15,5 +15,4 @@ public class CreateEmployeeInput {
     private Integer salary;
     private Integer age;
     private String title;
-
 }

@@ -1,8 +1,8 @@
 package com.reliaquest.api.model;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
-import lombok.*;
 import java.util.UUID;
+import lombok.*;
 
 @Data
 @AllArgsConstructor

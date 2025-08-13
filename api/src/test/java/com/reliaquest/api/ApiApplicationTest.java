@@ -1,22 +1,21 @@
 package com.reliaquest.api;
 
-import com.reliaquest.api.model.Employee;
-import com.reliaquest.api.service.IEmployeeService;
-import com.reliaquest.server.model.MockEmployee;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.web.client.RestTemplate;
-
-import java.util.List;
-import java.util.UUID;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+
+import com.reliaquest.api.model.Employee;
+import com.reliaquest.api.service.IEmployeeService;
+import com.reliaquest.server.model.MockEmployee;
+import java.util.List;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.web.client.RestTemplate;
 
 @SpringBootTest
 class ApiApplicationTest {
@@ -26,7 +25,7 @@ class ApiApplicationTest {
     RestTemplate http;
 
     @Autowired
-    IEmployeeService employeeService;  // Autowire your real service bean
+    IEmployeeService employeeService; // Autowire your real service bean
 
     @Test
     void contextLoads_andServiceCanFetchEmployees() {
@@ -40,8 +39,7 @@ class ApiApplicationTest {
         when(m.getTitle()).thenReturn("Developer");
         when(m.getEmail()).thenReturn("brenden@example.com");
 
-        when(http.getForObject(anyString(), eq(MockEmployee[].class)))
-                .thenReturn(new MockEmployee[]{ m });
+        when(http.getForObject(anyString(), eq(MockEmployee[].class))).thenReturn(new MockEmployee[] {m});
 
         // Act
         List<Employee> result = employeeService.getAllEmployees();

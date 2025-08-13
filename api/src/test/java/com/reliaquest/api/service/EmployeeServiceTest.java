@@ -1,23 +1,22 @@
 package com.reliaquest.api.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.when;
+
 import com.reliaquest.api.client.EmployeeClient;
 import com.reliaquest.api.exception.EmployeeNotFoundException;
 import com.reliaquest.api.model.CreateEmployeeInput;
 import com.reliaquest.api.model.Employee;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.IntStream;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class EmployeeServiceTest {
@@ -53,7 +52,8 @@ class EmployeeServiceTest {
 
     @Test
     void getEmployeesByNameSearch_caseInsensitive() {
-        Employee a = new Employee(UUID.randomUUID(), "Brenden Finnerty", 2000000, 25, "dev", "brenden.finnerty@gmail.com");
+        Employee a =
+                new Employee(UUID.randomUUID(), "Brenden Finnerty", 2000000, 25, "dev", "brenden.finnerty@gmail.com");
         Employee b = new Employee(UUID.randomUUID(), "Bob", 200, 26, "Y", "b@y");
         when(client.getAllEmployees()).thenReturn(List.of(a, b));
 
@@ -76,8 +76,7 @@ class EmployeeServiceTest {
     void getEmployeesByNameSearch_blankReturnsAll() {
         List<Employee> list = List.of(
                 new Employee(UUID.randomUUID(), "A", 1, 20, "T", "a@x"),
-                new Employee(UUID.randomUUID(), "B", 2, 21, "T", "b@x")
-        );
+                new Employee(UUID.randomUUID(), "B", 2, 21, "T", "b@x"));
         when(client.getAllEmployees()).thenReturn(list);
 
         assertEquals(2, service.getEmployeesByNameSearch("  ").size());
@@ -129,23 +128,21 @@ class EmployeeServiceTest {
     @Test
     void topTenHighestEarningEmployeeNames_sortedDesc_limit10() {
         List<Employee> many = new ArrayList<>();
-        IntStream.range(0, 15).forEach(i ->
-                many.add(new Employee(UUID.randomUUID(), "E" + i, 100 + i, 30, "T", "e@x"))
-        );
+        IntStream.range(0, 15)
+                .forEach(i -> many.add(new Employee(UUID.randomUUID(), "E" + i, 100 + i, 30, "T", "e@x")));
         when(client.getAllEmployees()).thenReturn(many);
 
         List<String> names = service.getTopTenHighestEarningEmployeeNames();
         assertEquals(10, names.size());
         assertEquals("E14", names.get(0)); // highest salary first
-        assertEquals("E5", names.get(9));  // 10th item
+        assertEquals("E5", names.get(9)); // 10th item
     }
 
     @Test
     void topTenHighestEarningEmployeeNames_handlesNulls() {
         List<Employee> list = List.of(
                 new Employee(UUID.randomUUID(), "A", null, 25, "X", "a@x"),
-                new Employee(UUID.randomUUID(), "B", 200, 26, "Y", "b@y")
-        );
+                new Employee(UUID.randomUUID(), "B", 200, 26, "Y", "b@y"));
         when(client.getAllEmployees()).thenReturn(list);
 
         List<String> names = service.getTopTenHighestEarningEmployeeNames();

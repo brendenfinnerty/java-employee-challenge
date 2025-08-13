@@ -1,25 +1,24 @@
 package com.reliaquest.api.controller;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reliaquest.api.model.CreateEmployeeInput;
 import com.reliaquest.api.model.Employee;
 import com.reliaquest.api.service.IEmployeeService;
+import jakarta.annotation.Resource;
+import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-
-import jakarta.annotation.Resource;
-import java.util.List;
-import java.util.UUID;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(EmployeeController.class)
 class EmployeeControllerTest {
@@ -83,8 +82,7 @@ class EmployeeControllerTest {
 
     @Test
     void topTenHighestEarningEmployeeNames_returnsOk() throws Exception {
-        when(employeeService.getTopTenHighestEarningEmployeeNames())
-                .thenReturn(List.of("Brenden", "Finnerty"));
+        when(employeeService.getTopTenHighestEarningEmployeeNames()).thenReturn(List.of("Brenden", "Finnerty"));
 
         mvc.perform(get("/api/v2/employee/topTenHighestEarningEmployeeNames"))
                 .andExpect(status().isOk())
